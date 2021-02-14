@@ -5,6 +5,6 @@ open Day02
 
 [<EntryPoint>]
 let main argv =
-    let r = Day02.day02()
+    let r = Day02.day02Part2()
     printfn "%A" r 
     0 // return an integer exit code
