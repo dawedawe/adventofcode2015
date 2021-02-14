@@ -13,14 +13,19 @@ let day01 () =
 let rec move currentFloor c position =
     if (Array.isEmpty c) then
         failwith "empty input"
+
     let currentFloor' =
-        if c.[0] = '('
-        then currentFloor + 1
-        else currentFloor - 1
+        if c.[0] = '(' then
+            currentFloor + 1
+        else
+            currentFloor - 1
+
     let position' = position + 1
-    if currentFloor' = -1
-    then position'
-    else move currentFloor' c.[1..] position'
+
+    if currentFloor' = -1 then
+        position'
+    else
+        move currentFloor' c.[1..] position'
 
 let day01Part2 () =
     let input =
