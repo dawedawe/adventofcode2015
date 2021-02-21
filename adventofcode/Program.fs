@@ -1,10 +1,9 @@
 // Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
 
 open System
-open Day02
 
 [<EntryPoint>]
 let main argv =
-    let r = Day02.day02Part2()
+    let r = Day03.day03()
     printfn "%A" r 
     0 // return an integer exit code
