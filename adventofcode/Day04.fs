@@ -11,10 +11,10 @@ let hash (s: string) =
 
     (h.[0], h.[1], h.[2] >>> 4)
 
-let find (s: string) =
+let find hashF (s: string) =
     let rec helper i =
         let s' = s + string i
-        let h = hash s'
+        let h = hashF s'
 
         match h with
         | (0uy, 0uy, 0uy) -> i
@@ -22,4 +22,14 @@ let find (s: string) =
 
     helper 1
 
-let day04 () = find Input
+let day04 () = find hash Input
+
+let hashPart2 (s: string) =
+    let h =
+        s.ToCharArray()
+        |> Array.map byte
+        |> System.Security.Cryptography.MD5.HashData
+
+    (h.[0], h.[1], h.[2])
+
+let day04Part2 () = find hashPart2 Input
