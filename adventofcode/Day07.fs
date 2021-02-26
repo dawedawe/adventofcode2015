@@ -107,3 +107,21 @@ let day07 () =
         |> Array.map parse
         |> runGrid
     wireSignals.["a"]
+
+let overwriteDirectToB value gate = 
+    match gate with
+    | Direct (Value _, "b") -> Direct (Value value, "b")
+    | _ -> gate
+
+let day07Part2 () =
+    let gates =
+        InputFile
+        |> System.IO.File.ReadAllLines
+        |> Array.map parse
+    let wireSignals = runGrid gates
+    let overwriteForB = wireSignals.["a"]
+    let wireSignals' = 
+        gates
+        |> Array.map (overwriteDirectToB overwriteForB)
+        |> runGrid
+    wireSignals'.["a"]
