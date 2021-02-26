@@ -69,3 +69,14 @@ let day09 () =
     let routes = bfs edges
     let minDist = routes.Select(calcDist).Min()
     minDist
+
+let day09Part2 () =
+    let edges =
+        InputFile
+        |> System.IO.File.ReadAllLines
+        |> Array.map parse
+        |> Array.collect id
+
+    let routes = bfs edges
+    let maxDist = routes.Select(calcDist).Max()
+    maxDist
