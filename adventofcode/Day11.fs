@@ -43,12 +43,20 @@ let isValid (pw: char []) =
     && hasPair pw
 
 let rec findNextPw (pw: char []) =
-    if isValid pw then
-        pw
+    let pw' = incrementPw pw
+
+    if isValid pw' then
+        pw'
     else
-        incrementPw pw |> findNextPw
+        findNextPw pw'
 
 let day11 () =
     "hxbxwxba".ToCharArray()
+    |> findNextPw
+    |> System.String
+
+let day11Part2 () =
+    "hxbxwxba".ToCharArray()
+    |> findNextPw
     |> findNextPw
     |> System.String
