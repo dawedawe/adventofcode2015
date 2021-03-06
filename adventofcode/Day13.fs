@@ -65,3 +65,40 @@ let day13 () =
     getPermutations subs
     |> Array.map (calcHappyness rules)
     |> Array.max
+
+let addMyself (rules: Rule []) =
+    let subs =
+        rules
+        |> Array.map (fun r -> r.Subject)
+        |> Array.distinct
+
+    seq {
+        for s in subs do
+            yield
+                { Subject = s
+                  NextTo = "me"
+                  Change = 0 }
+
+            yield
+                { Subject = "me"
+                  NextTo = s
+                  Change = 0 }
+    }
+    |> Seq.toArray
+    |> Array.append rules
+
+let day13Part2 () =
+    let rules =
+        InputFile
+        |> System.IO.File.ReadAllLines
+        |> Array.map parse
+        |> addMyself
+
+    let subs =
+        rules
+        |> Array.map (fun r -> r.Subject)
+        |> Array.distinct
+
+    getPermutations subs
+    |> Array.map (calcHappyness rules)
+    |> Array.max
