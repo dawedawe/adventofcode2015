@@ -42,9 +42,14 @@ let calcScore (recipe: seq<Ingredient * int>) =
         |> Seq.sumBy (fun (i, c) -> c * i.Texture)
         |> max 0
 
-    capacity * durability * flavor * texture
+    let calories =
+        recipe
+        |> Seq.sumBy (fun (i, c) -> c * i.Calories)
+        |> max 0
 
-let findHighScore (ingredients: Ingredient []) =
+    (capacity * durability * flavor * texture, calories)
+
+let calcAllRecipes (ingredients: Ingredient []) =
     seq {
         for i in 0 .. 100 do
             for j in 0 .. (100 - i) do
@@ -58,10 +63,18 @@ let findHighScore (ingredients: Ingredient []) =
 
                         yield (calcScore recipe)
     }
-    |> Seq.max
 
 let day15 () =
     InputFile
     |> System.IO.File.ReadAllLines
     |> Array.map parse
-    |> findHighScore
+    |> calcAllRecipes
+    |> Seq.maxBy fst |> fst
+
+let day15Part2 () =
+    InputFile
+    |> System.IO.File.ReadAllLines
+    |> Array.map parse
+    |> calcAllRecipes
+    |> Seq.filter (fun (_, c) -> c = 500)
+    |> Seq.maxBy fst |> fst
