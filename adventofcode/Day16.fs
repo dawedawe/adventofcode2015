@@ -87,3 +87,25 @@ let day16 () =
     |> System.IO.File.ReadAllLines
     |> Array.map parse
     |> Array.filter isMatch
+
+let predicateOrNone (compoundAmount: int option) predicate =
+  Option.map predicate compoundAmount
+  |> Option.defaultValue true
+
+let isMatchPart2 (aunt: Aunt) =
+    (aunt.Children = tickerTape.Children || aunt.Children.IsNone)
+    && (predicateOrNone aunt.Cats (fun x -> x > tickerTape.Cats.Value))
+    && (aunt.Samoyeds = tickerTape.Samoyeds || aunt.Samoyeds.IsNone)
+    && (predicateOrNone aunt.Pomeranians (fun x -> x < tickerTape.Pomeranians.Value))
+    && (aunt.Akitas = tickerTape.Akitas || aunt.Akitas.IsNone)
+    && (aunt.Vizslas = tickerTape.Vizslas || aunt.Vizslas.IsNone)
+    && (predicateOrNone aunt.Goldfish (fun x -> x < tickerTape.Goldfish.Value))
+    && (predicateOrNone aunt.Trees (fun x -> x > tickerTape.Trees.Value))
+    && (aunt.Cars = tickerTape.Cars || aunt.Cars.IsNone)
+    && (aunt.Perfumes = tickerTape.Perfumes || aunt.Perfumes.IsNone)
+
+let day16Part2 () =
+    InputFile
+    |> System.IO.File.ReadAllLines
+    |> Array.map parse
+    |> Array.filter isMatchPart2
