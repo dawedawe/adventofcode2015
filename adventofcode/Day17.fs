@@ -28,3 +28,31 @@ let day17 () =
     |> System.IO.File.ReadAllLines
     |> Array.map int
     |> findCombinations
+
+let findCombinationsPart2 (containers: int []) =
+    let upperBound =
+        int (2. ** (float (Array.length containers))) - 1
+
+    let containers' = Array.indexed containers
+
+    let combinations =
+        seq {
+            for i in 0 .. upperBound do
+                let subSet = getSubset containers' i
+
+                if Seq.sum subSet = 150 then
+                    yield subSet
+        }
+
+    let minLength =
+        Seq.minBy Seq.length combinations |> Seq.length
+
+    combinations
+    |> Seq.filter (fun s -> Seq.length s = minLength)
+    |> Seq.length
+
+let day17Part2 () =
+    InputFile
+    |> System.IO.File.ReadAllLines
+    |> Array.map int
+    |> findCombinationsPart2
