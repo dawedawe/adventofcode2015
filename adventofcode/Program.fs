@@ -4,6 +4,6 @@ open System
 
 [<EntryPoint>]
 let main argv =
-    let r = Day18.day18()
+    let r = Day18.day18Part2()
     printfn "%A" r 
     0 // return an integer exit code

@@ -53,3 +53,38 @@ let day18 () =
     |> System.IO.File.ReadAllLines
     |> animate 100
     |> countOn
+
+let switchOnCorners (grid: char [] []) =
+    let xBound = grid.[0].Length - 1
+    let yBound = grid.Length - 1
+    grid.[0].[0] <- '#'
+    grid.[0].[xBound] <- '#'
+    grid.[yBound].[0] <- '#'
+    grid.[yBound].[xBound] <- '#'
+
+let animatePart2 n (input: string []) =
+    let rec helper left grid =
+        if left = 0 then
+            grid
+        else
+            let left' = left - 1
+            let grid' = Array.copy grid |> Array.map Array.copy
+
+            for x in 0 .. grid.[0].Length - 1 do
+                for y in 0 .. grid.Length - 1 do
+                    grid'.[y].[x] <- calcNextState x y grid
+
+            switchOnCorners grid'
+            helper left' grid'
+
+    let inputGrid =
+        input |> Array.map (fun s -> s.ToCharArray())
+
+    switchOnCorners inputGrid
+    helper n inputGrid
+
+let day18Part2 () =
+    InputFile
+    |> System.IO.File.ReadAllLines
+    |> animatePart2 100
+    |> countOn
