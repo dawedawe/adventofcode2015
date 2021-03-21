@@ -30,3 +30,42 @@ let day19 () =
     |> Seq.concat
     |> Seq.distinct
     |> Seq.length
+
+type State = { Steps: int; Molecule: string }
+
+let applyReplacementRev (s: string) (r: Replacement) =
+    let idx = s.IndexOf(r.Out)
+
+    if idx >= 0 then
+        let prefix = s.Substring(0, idx)
+        let postfix = s.Substring(idx + r.Out.Length)
+        Some(prefix + r.In + postfix)
+    else
+        None
+
+let applyAllReplacementsRev (state: State) (replacements: Replacement []) =
+    replacements
+    |> Array.fold
+        (fun s r ->
+            match (applyReplacementRev s.Molecule r) with
+            | Some x ->
+                { state with
+                      Steps = s.Steps + 1
+                      Molecule = x }
+            | None -> s)
+        state
+
+let rec reduce (replacements: Replacement []) (state: State) =
+    if (state.Molecule = "e") then
+        state.Steps
+    else
+        applyAllReplacementsRev state replacements
+        |> reduce replacements
+
+let day19Part2 () =
+    let lines = InputFile |> System.IO.File.ReadAllLines
+    let ruleLines = lines.[0..lines.Length - 3]
+    let molecule = Array.last lines
+    let replacements = ruleLines |> Array.map parse
+    let initState = { Steps = 0; Molecule = molecule }
+    reduce replacements initState
