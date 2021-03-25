@@ -236,3 +236,18 @@ let day21 () =
                 yield inventoryCost i
     }
     |> Seq.head
+
+let day21Part2 () =
+    let boss =
+        InputFile |> System.IO.File.ReadAllLines |> parse
+
+    seq {
+        for i in inventories do
+            let player = createPlayer i
+            let winner = game player boss
+
+            if winner <> player.Name then
+                yield inventoryCost i
+    }
+    |> Seq.last
+
