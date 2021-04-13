@@ -1,7 +1,5 @@
 module Day22
 
-open System.Collections.Generic
-
 [<Literal>]
 let InputFile = "Day22Input.txt"
 
@@ -37,7 +35,7 @@ type Boss =
       HitPoints: int
       Damage: int }
 
-let spells =
+let spellsShop =
     [ { Name = "Magic Missile"
         Cost = 53
         Damage = 4
@@ -47,7 +45,7 @@ let spells =
         Damage = 2
         Heal = 2 } ]
 
-let effects =
+let effectsShop =
     [ { Name = "Shield"
         Cost = 113
         Damage = 0
@@ -109,132 +107,65 @@ let applyEffectToBoss (boss: Boss) (effect: Effect) =
               HitPoints = boss.HitPoints - 3 }
     | _ -> boss
 
-let wearOffEffects (effects: Effect list) =
-    effects
-    |> List.map
-        (fun e ->
-            { e with
-                  Timer = ((fst e.Timer) - 1, snd e.Timer) })
-    |> List.filter (fun e -> fst e.Timer > 0)
+let wearOffEffects (effects: Effect list) (player: Player) =
+    let effects' =
+        effects
+        |> List.map
+            (fun e ->
+                { e with
+                      Timer = ((fst e.Timer) - 1, snd e.Timer) })
+        |> List.filter (fun e -> fst e.Timer > 0)
 
-let playRound (player: Player) (boss: Boss) (effects: Effect list) (spell: Spell option) =
-    let mutable player' = player
-    let mutable boss' = boss
-    let mutable effects' = effects
+    let shieldInOld =
+        effects
+        |> List.tryFind (fun e -> e.Name = "Shield")
+        |> Option.isSome
 
-    // player turn
-    for e in effects' do
-        player' <- applyEffectToPlayer player e
-        boss' <- applyEffectToBoss boss e
+    let shieldInNew =
+        effects'
+        |> List.tryFind (fun e -> e.Name = "Shield")
+        |> Option.isSome
 
-    effects' <- wearOffEffects effects'
-
-    match spell with
-    | Some s ->
-        let p, b = applySpell player' boss' s
-        player' <- p
-        boss' <- b
-    | None -> ()
-
-    // boss turn
-    for e in effects do
-        player' <- applyEffectToPlayer player' e
-        boss' <- applyEffectToBoss boss' e
-
-    effects' <- wearOffEffects effects'
-
-    if boss'.HitPoints > 0 then
-        let damage = max (boss.Damage - player'.Armor) 1
-
-        player' <-
-            { player' with
-                  HitPoints = player'.HitPoints - damage }
-
-    (player', boss', effects')
-
-let buy (player: Player) (toBuy: SpellEffect) (effects: Effect list) =
-    let (cost, effects', spell) =
-        match toBuy with
-        | Spell s -> (s.Cost, effects, Some s)
-        | Effect e -> (e.Cost, e :: effects, None)
-
-    ({ player with
-           Spend = player.Spend + cost
-           Mana = player.Mana - cost },
-     effects',
-     spell)
-
-let playGame (p: Player) (b: Boss) (s: SpellEffect list) =
-    let rec game (player: Player) (boss: Boss) (strategy: SpellEffect list) (effects: Effect list) =
-        if strategy = List.empty then
-            boss.Name
+    let player' =
+        if shieldInOld && not shieldInNew then
+            { player with Armor = player.Armor - 7 }
         else
-            let toBuy, strategy' = strategy.[0], List.tail strategy
-            let (player', effects', spell) = buy player toBuy effects
+            player
 
-            if (player'.Mana > 0) then
-                let (player'', boss', effects'') = playRound player' boss effects' spell
+    effects', player'
 
-                if player''.HitPoints <= 0 then
-                    boss'.Name
-                else if boss'.HitPoints <= 0 then
-                    player''.Name
-                else
-                    game player'' boss' strategy' effects''
-            else
-                boss.Name
+let buy (player: Player) (toBuy: SpellEffect) =
+    let cost =
+        match toBuy with
+        | Spell s -> s.Cost
+        | Effect e -> e.Cost
 
-    game p b s List.empty
+    { player with
+          Spend = player.Spend + cost
+          Mana = player.Mana - cost }
 
-let getPossibleFollowUpPurchases (purchases: SpellEffect list) =
+let getPossibleFollowUpPurchases manaLeft (activeEffects: Effect list) =
     seq {
-        for s in spells do
-            yield (List.append purchases [ Spell s ])
+        let affordableSpells =
+            spellsShop
+            |> List.filter (fun s -> s.Cost <= manaLeft)
 
-        for e in effects do
-            let lifetimeRounds =
-                ((float (snd e.Timer)) / 2.) |> ceil |> int
+        for s in affordableSpells do
+            yield Spell s
 
+        let affordableEffects =
+            effectsShop
+            |> List.filter (fun e -> e.Cost <= manaLeft)
+
+        for e in affordableEffects do
             let eActive =
-                if purchases.Length >= (lifetimeRounds - 1) then
-                    List.rev purchases
-                    |> List.take (lifetimeRounds - 1)
-                    |> List.contains (Effect e)
-                else
-                    false
+                activeEffects
+                |> List.tryFind (fun x -> x.Name = e.Name)
+                |> Option.isSome
 
-            if (not eActive) then
-                yield (List.append purchases [ Effect e ])
+            if not eActive then yield Effect e
     }
     |> Seq.toList
-
-let calcStrategyCost (strategy: SpellEffect list) =
-    strategy
-    |> List.sumBy
-        (fun p ->
-            match p with
-            | Spell s -> s.Cost
-            | Effect e -> e.Cost)
-
-
-let bfs player boss =
-    let queue = Queue<SpellEffect list>()
-
-    getPossibleFollowUpPurchases List.empty
-    |> List.iter queue.Enqueue
-
-    seq {
-        while (queue.Count <> 0) do
-            let strategy = queue.Dequeue()
-            let winner = playGame player boss strategy
-
-            if winner = player.Name then
-                yield strategy
-            else
-                getPossibleFollowUpPurchases strategy
-                |> List.iter queue.Enqueue
-    }
-    |> Seq.head
 
 let createPlayer =
     { Name = "Player"
@@ -244,17 +175,179 @@ let createPlayer =
       Mana = 500
       Spend = 0 }
 
+type Difficulty =
+    | Easy
+    | Hard
+
+let rec play c difficulty (p: Player) (b: Boss) (efx: Effect list) =
+    let mutable currentMin = c
+
+    let mutable player =
+        match difficulty with
+        | Easy -> p
+        | Hard -> { p with HitPoints = p.HitPoints - 1 }
+
+    let mutable boss = b
+    let mutable effects = efx
+
+    // player turn
+    if (player.HitPoints > 0) then
+        for e in effects do
+            player <- applyEffectToPlayer player e
+            boss <- applyEffectToBoss boss e
+
+        let purchases =
+            getPossibleFollowUpPurchases player.Mana effects
+
+        let wearedEffects, wearedPlayer = wearOffEffects effects player
+        effects <- wearedEffects
+        player <- wearedPlayer
+
+        if boss.HitPoints <= 0 then
+            if player.Spend < currentMin then
+                currentMin <- player.Spend
+        else
+            for purchase in purchases do
+                let mutable player' = player
+                let mutable boss' = boss
+                let mutable effects' = effects
+                player' <- buy player' purchase
+
+                match purchase with
+                | Spell boughtSpell ->
+                    let pl, bo = applySpell player' boss' boughtSpell
+                    player' <- pl
+                    boss' <- bo
+                | Effect boughtEffect ->
+                    player' <- applyEffectToPlayer player' boughtEffect
+                    boss' <- applyEffectToBoss boss' boughtEffect
+
+                    let e' =
+                        { boughtEffect with
+                              Timer = ((fst boughtEffect.Timer) - 1, snd boughtEffect.Timer) }
+
+                    effects' <- List.append effects' [ e' ]
+
+                // boss turn
+                if boss'.HitPoints > 0 then
+                    for e in effects' do
+                        player' <- applyEffectToPlayer player' e
+                        boss' <- applyEffectToBoss boss' e
+
+                    if (boss'.HitPoints > 0) then
+                        let damage = max (boss'.Damage - player'.Armor) 1
+
+                        player' <-
+                            { player' with
+                                  HitPoints = player'.HitPoints - damage }
+
+                        if player'.HitPoints > 0
+                           && player'.Spend < currentMin then
+                            let wearedEffects, wearedPlayer = wearOffEffects effects' player'
+                            effects' <- wearedEffects
+                            player' <- wearedPlayer
+
+                            let spend =
+                                play currentMin difficulty player' boss' effects'
+
+                            if spend < currentMin then
+                                currentMin <- spend
+                    else if player'.Spend < currentMin then
+                        currentMin <- player'.Spend
+                else if player'.Spend < currentMin then
+                    currentMin <- player'.Spend
+
+    currentMin
 
 let day22 () =
     let boss =
         InputFile |> System.IO.File.ReadAllLines |> parse
 
-    let player =
-        { Name = "Player"
-          HitPoints = 50
-          Damage = 0
-          Armor = 0
-          Mana = 500
-          Spend = 0 }
+    let player = createPlayer
+    play System.Int32.MaxValue Easy player boss List.empty
 
-    bfs player boss |> calcStrategyCost
+let rec playPart2 difficulty (p: Player) (b: Boss) (efx: Effect list) =
+    let mutable player =
+        match difficulty with
+        | Easy -> p
+        | Hard -> { p with HitPoints = p.HitPoints - 1 }
+
+    let mutable boss = b
+    let mutable effects = efx
+
+    seq {
+        // player turn
+        if (player.HitPoints > 0) then
+            for e in effects do
+                player <- applyEffectToPlayer player e
+                boss <- applyEffectToBoss boss e
+
+            let purchases =
+                getPossibleFollowUpPurchases player.Mana effects
+
+            let wearedEffects, wearedPlayer = wearOffEffects effects player
+            effects <- wearedEffects
+            player <- wearedPlayer
+
+            if boss.HitPoints <= 0 then
+                yield player.Spend
+            else
+                for purchase in purchases do
+                    let mutable player' = player
+                    let mutable boss' = boss
+                    let mutable effects' = effects
+                    player' <- buy player' purchase
+
+                    match purchase with
+                    | Spell boughtSpell ->
+                        let pl, bo = applySpell player' boss' boughtSpell
+                        player' <- pl
+                        boss' <- bo
+                    | Effect boughtEffect ->
+                        player' <- applyEffectToPlayer player' boughtEffect
+                        boss' <- applyEffectToBoss boss' boughtEffect
+
+                        let e' =
+                            { boughtEffect with
+                                  Timer = ((fst boughtEffect.Timer) - 1, snd boughtEffect.Timer) }
+
+                        effects' <- List.append effects' [ e' ]
+
+                    // boss turn
+                    if boss'.HitPoints > 0 then
+                        for e in effects' do
+                            player' <- applyEffectToPlayer player' e
+                            boss' <- applyEffectToBoss boss' e
+
+                        if (boss'.HitPoints > 0) then
+                            let damage = max (boss'.Damage - player'.Armor) 1
+
+                            player' <-
+                                { player' with
+                                      HitPoints = player'.HitPoints - damage }
+
+                            if player'.HitPoints > 0 then
+                                let wearedEffects, wearedPlayer = wearOffEffects effects' player'
+                                effects' <- wearedEffects
+                                player' <- wearedPlayer
+
+                                let spends =
+                                    playPart2 difficulty player' boss' effects'
+
+                                for spend in spends do
+                                    yield spend
+                        else
+                            yield player'.Spend
+                    else
+                        yield player'.Spend
+    }
+
+let day22Part2 () =
+    let boss =
+        InputFile |> System.IO.File.ReadAllLines |> parse
+
+    let player = createPlayer
+
+    playPart2 Hard player boss List.empty
+    |> Seq.take 10_000_000
+    |> Seq.min
