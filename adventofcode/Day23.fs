@@ -37,16 +37,22 @@ let exec instr ptr a b =
     | Jio ('b', off) -> if b = 1 then a, b, ptr + off else a, b, ptr + 1
     | _ -> failwith "can't exec"
 
-let run (program: Instruction []) =
+let run regA (program: Instruction []) =
     let rec helper a b ptr =
         let a', b', ptr' = exec program.[ptr] ptr a b
         if ptr' < Array.length program
         then helper a' b' ptr'
         else b'
-    helper 0 0 0
+    helper regA 0 0
 
 let day23 () =
     InputFile
     |> System.IO.File.ReadAllLines
     |> Array.map parse
-    |> run
+    |> run 0
+
+let day23Part2 () =
+    InputFile
+    |> System.IO.File.ReadAllLines
+    |> Array.map parse
+    |> run 1
